@@ -25,7 +25,7 @@ class ModelBasedRL(object):
                  nn_layers=1):
         self._env = env
         self._max_rollout_length = max_rollout_length
-        self._num_onpo_train_policylicy_iters = num_onplicy_iters
+        self._num_onpo_train_policy_iters = num_onplicy_iters
         self._num_onpolicy_rollouts = num_onpolicy_rollouts
         self._training_epochs = training_epochs
         self._training_batch_size = training_batch_size

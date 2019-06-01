@@ -158,32 +158,22 @@ class ModelBasedPolicy(object):
         ### YOUR CODE HERE
         assert state_ph.shape[0] == 1
 
-        action_sequences = []
-        for _ in range(self._num_random_action_selection):
-            action_seq = tf.random_uniform(
-                [self._horizon, self.action_dim],
-                minval=self._action_space_low,
-                maxval=self._action_space_high,
-                )
-            action_sequences.append(action_seq)
+        action_sequences = tf.random_uniform(
+            [self._num_random_action_selection, self._horizon, self.action_dim],
+            minval=self._action_space_low,
+            maxval=self._action_space_high,
+            )
 
-        cost_sequences = []
-        for action_seq in action_sequences:
-            for i in range(self._horizon):
-                action = action_seq[None, i, :]
-                next_state_ph = self._dynamics_func(state_ph, action, False)
-                if i == 0:
-                    next_states = next_state_ph
-                    states = state_ph
-                else:
-                    next_states = tf.concat([next_states, next_state_ph], axis=0)
-                    states = tf.concat([states, state_ph])
+        states = tf.concat([state_ph]*self._num_random_action_selection, axis=0)
+        for i in range(self._horizon):
+            actions = action_sequences[:, i, :]
+            next_states = self._dynamics_func(states, actions, True)
+            if i == 0:
+                cost_sequences = self.cost_fn(states, actions, next_states)
+            else:
+                cost_sequences += self.cost_fn(states, actions, next_states)
 
-                state_ph = next_state_ph
-
-            cost_seq = self.cost_fn(states, action_seq, next_states)
-            cost_sequences.append(cost_seq)
-        cost_sequences = tf.convert_to_tensor(cost_sequences).squeeze()
+            states = next_states
 
         min_cost_seq_idx = tf.argmin(cost_sequences)
         best_action = action_sequences[min_cost_seq_idx][0]

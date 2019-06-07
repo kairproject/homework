@@ -156,22 +156,27 @@ class ModelBasedPolicy(object):
         """
         ### PROBLEM 2
         ### YOUR CODE HERE
-        assert state_ph.shape[0] == 1
-
         action_sequences = tf.random_uniform(
-            [self._num_random_action_selection, self._horizon, self.action_dim],
+            [self._num_random_action_selection, self._horizon, self._action_dim],
             minval=self._action_space_low,
             maxval=self._action_space_high,
             )
 
-        states = tf.concat([state_ph]*self._num_random_action_selection, axis=0)
+        states = tf.stack([state_ph]*self._num_random_action_selection, axis=0)
+        states = tf.reshape(tf.cast(states, tf.float64),
+                            [self._num_random_action_selection, -1])
+
         for i in range(self._horizon):
-            actions = action_sequences[:, i, :]
+            states = tf.cast(states, tf.float64)
+            actions = tf.cast(action_sequences[:, i, :], tf.float64)
             next_states = self._dynamics_func(states, actions, True)
+            actions = tf.cast(actions, tf.float32)
+            states = tf.cast(states, tf.float32)
+            next_states = tf.cast(next_states, tf.float32)
             if i == 0:
-                cost_sequences = self.cost_fn(states, actions, next_states)
+                cost_sequences = self._cost_fn(states, actions, next_states)
             else:
-                cost_sequences += self.cost_fn(states, actions, next_states)
+                cost_sequences += self._cost_fn(states, actions, next_states)
 
             states = next_states
 
@@ -264,7 +269,8 @@ class ModelBasedPolicy(object):
 
         ### PROBLEM 2
         ### YOUR CODE HERE
-        best_action = self._sess(self._best_action, feed_dict={self._state_ph: state})
+        state = np.expand_dims(state, axis=0)
+        best_action = self._sess.run(self._best_action, feed_dict={self._state_ph: state})
 
         assert np.shape(best_action) == (self._action_dim,)
         return best_action

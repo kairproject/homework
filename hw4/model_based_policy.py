@@ -41,9 +41,9 @@ class ModelBasedPolicy(object):
         """
         ### PROBLEM 1
         ### YOUR CODE HERE
-        state_ph = tf.placeholders(shape=(None, self._state_dim), dtype=tf.float64, name='current_state')
-        action_ph = tf.placeholders(shape=(None, self._action_dim), dtype=tf.float64, name='current_action')
-        next_state_ph = tf.placeholders(shape=(None, self._state_dim), dtype=tf.float64, name='next_state')
+        state_ph = tf.placeholder(shape=(None, self._state_dim), dtype=tf.float64, name='current_state')
+        action_ph = tf.placeholder(shape=(None, self._action_dim), dtype=tf.float64, name='current_action')
+        next_state_ph = tf.placeholder(shape=(None, self._state_dim), dtype=tf.float64, name='next_state')
         return state_ph, action_ph, next_state_ph
 
     def _dynamics_func(self, state, action, reuse):
@@ -171,12 +171,18 @@ class ModelBasedPolicy(object):
         ### YOUR CODE HERE
         sess = tf.Session()   
         state_ph, action_ph, next_state_ph = self._setup_placeholders()
-        next_state_pred = self._dynamics_func()
+        next_state_pred = self._dynamics_func(
+            state=state_ph,
+            action=action_ph,
+            reuse=False
+        )
         loss, optimizer = self._setup_training(state_ph, next_state_ph, next_state_pred)
                        
         ### PROBLEM 2
         ### YOUR CODE HERE
-        best_action = None
+        best_action = self._setup_action_selection(
+            state_ph=state_ph
+        )
         
         sess.run(tf.global_variables_initializer())
 
@@ -192,13 +198,15 @@ class ModelBasedPolicy(object):
         """
         ### PROBLEM 1
         ### YOUR CODE HERE
-        next_state_pred = self._sess.run([self._next_state_pred],
-                                         feed_dict={self._action_ph: actions,
-                                                    self._state_ph: states})
-        loss, _ = self._sess.run([self._loss, self._optimizer],
-                                 feed_dict={self._state_ph: states,
-                                            self._next_state_ph: next_states,
-                                            self._next_state_pred: next_state_pred})
+        loss, _ = self._sess.run(
+            [self._loss, self._optimizer],
+            feed_dict={
+                self._state_ph: states,
+                self._action_ph: actions,
+                self._next_state_ph: next_states
+            }
+        )
+
         return loss
 
     def predict(self, state, action):
@@ -217,11 +225,11 @@ class ModelBasedPolicy(object):
         ### PROBLEM 1
         ### YOUR CODE HERE
         feed_dict = {
-            self._state_ph: tf.expand_dims(state, 0),
-            self._action_ph: tf.expand_dims(action, 0)
+            self._state_ph: state[None, ...],       # Input to the placeholder cannot be Tensor
+            self._action_ph: action[None, ...]
         }
 
-        next_state_pred = self._sess.run(self._next_state_pred, feed_dict)
+        next_state_pred = self._sess.run(self._next_state_pred, feed_dict)[0]
 
         assert np.shape(next_state_pred) == (self._state_dim,)
         return next_state_pred

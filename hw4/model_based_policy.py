@@ -41,9 +41,12 @@ class ModelBasedPolicy(object):
         """
         ### PROBLEM 1
         ### YOUR CODE HERE
-        state_ph = tf.placeholder(shape=(None, self._state_dim), dtype=tf.float64, name='current_state')
-        action_ph = tf.placeholder(shape=(None, self._action_dim), dtype=tf.float64, name='current_action')
-        next_state_ph = tf.placeholder(shape=(None, self._state_dim), dtype=tf.float64, name='next_state')
+        state_ph = tf.placeholder(shape=(None, self._state_dim),
+                dtype=tf.float32, name='current_state')
+        action_ph = tf.placeholder(shape=(None, self._action_dim),
+                dtype=tf.float32, name='current_action')
+        next_state_ph = tf.placeholder(shape=(None, self._state_dim),
+                dtype=tf.float32, name='next_state')
         return state_ph, action_ph, next_state_ph
 
     def _dynamics_func(self, state, action, reuse):
@@ -163,16 +166,11 @@ class ModelBasedPolicy(object):
             )
 
         states = tf.stack([state_ph]*self._num_random_action_selection, axis=0)
-        states = tf.reshape(tf.cast(states, tf.float64),
-                            [self._num_random_action_selection, -1])
+        states = tf.reshape(states, [self._num_random_action_selection, -1])
 
         for i in range(self._horizon):
-            states = tf.cast(states, tf.float64)
-            actions = tf.cast(action_sequences[:, i, :], tf.float64)
+            actions = action_sequences[:, i, :]
             next_states = self._dynamics_func(states, actions, True)
-            actions = tf.cast(actions, tf.float32)
-            states = tf.cast(states, tf.float32)
-            next_states = tf.cast(next_states, tf.float32)
             if i == 0:
                 cost_sequences = self._cost_fn(states, actions, next_states)
             else:

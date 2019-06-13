@@ -159,7 +159,7 @@ class ModelBasedRL(object):
         logger.info('Training policy....')
         ### PROBLEM 2
         ### YOUR CODE HERE
-        raise NotImplementedError
+        self._train_policy(self._random_dataset)
 
         logger.info('Evaluating policy...')
         ### PROBLEM 2

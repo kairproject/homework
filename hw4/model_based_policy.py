@@ -41,9 +41,12 @@ class ModelBasedPolicy(object):
         """
         ### PROBLEM 1
         ### YOUR CODE HERE
-        state_ph = tf.placeholder(shape=(None, self._state_dim), dtype=tf.float64, name='current_state')
-        action_ph = tf.placeholder(shape=(None, self._action_dim), dtype=tf.float64, name='current_action')
-        next_state_ph = tf.placeholder(shape=(None, self._state_dim), dtype=tf.float64, name='next_state')
+        state_ph = tf.placeholder(shape=(None, self._state_dim),
+                dtype=tf.float32, name='current_state')
+        action_ph = tf.placeholder(shape=(None, self._action_dim),
+                dtype=tf.float32, name='current_action')
+        next_state_ph = tf.placeholder(shape=(None, self._state_dim),
+                dtype=tf.float32, name='next_state')
         return state_ph, action_ph, next_state_ph
 
     def _dynamics_func(self, state, action, reuse):
@@ -156,7 +159,27 @@ class ModelBasedPolicy(object):
         """
         ### PROBLEM 2
         ### YOUR CODE HERE
-        raise NotImplementedError
+        action_sequences = tf.random_uniform(
+            [self._num_random_action_selection, self._horizon, self._action_dim],
+            minval=self._action_space_low,
+            maxval=self._action_space_high,
+            )
+
+        states = tf.stack([state_ph]*self._num_random_action_selection, axis=0)
+        states = tf.reshape(states, [self._num_random_action_selection, -1])
+
+        for i in range(self._horizon):
+            actions = action_sequences[:, i, :]
+            next_states = self._dynamics_func(states, actions, True)
+            if i == 0:
+                cost_sequences = self._cost_fn(states, actions, next_states)
+            else:
+                cost_sequences += self._cost_fn(states, actions, next_states)
+
+            states = next_states
+
+        min_cost_seq_idx = tf.argmin(cost_sequences)
+        best_action = action_sequences[min_cost_seq_idx][0]
 
         return best_action
 
@@ -166,10 +189,10 @@ class ModelBasedPolicy(object):
 
         The variables returned will be set as class attributes (see __init__)
         """
-            
+
         ### PROBLEM 1
         ### YOUR CODE HERE
-        sess = tf.Session()   
+        sess = tf.Session()
         state_ph, action_ph, next_state_ph = self._setup_placeholders()
         next_state_pred = self._dynamics_func(
             state=state_ph,
@@ -177,13 +200,12 @@ class ModelBasedPolicy(object):
             reuse=False
         )
         loss, optimizer = self._setup_training(state_ph, next_state_ph, next_state_pred)
-                       
+
         ### PROBLEM 2
         ### YOUR CODE HERE
         best_action = self._setup_action_selection(
             state_ph=state_ph
         )
-        
         sess.run(tf.global_variables_initializer())
 
         return sess, state_ph, action_ph, next_state_ph, \
@@ -216,7 +238,7 @@ class ModelBasedPolicy(object):
         returns:
             next_state_pred: predicted next state
 
-        implementation detils:
+        implementation details:
             (i) The state and action arguments are 1-dimensional vectors (NO batch dimension)
         """
         assert np.shape(state) == (self._state_dim,)
@@ -245,7 +267,8 @@ class ModelBasedPolicy(object):
 
         ### PROBLEM 2
         ### YOUR CODE HERE
-        raise NotImplementedError
+        state = np.expand_dims(state, axis=0)
+        best_action = self._sess.run(self._best_action, feed_dict={self._state_ph: state})
 
         assert np.shape(best_action) == (self._action_dim,)
         return best_action
